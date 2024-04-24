@@ -461,8 +461,14 @@ class ITKConan(ConanFile):
         lib_suffix = f"{itk_version.major}.{itk_version.minor}"
 
         content = textwrap.dedent("""\
-                                  set(ITK_CMAKE_DIR "${itk_LIB_DIRS_RELEASE}/cmake/ITK-%(version)s")
-                                  """ % {"version":lib_suffix})
+                                  get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+                                  set(ITK_CMAKE_DIR "${_DIR}")
+                                  set(ITK_MODULES_DIR "${_DIR}/Modules")
+                                  set(ITK_MODULES_ENABLED "ITKVNLInstantiation;ITKCommon;ITKStatistics;ITKTransform;ITKMesh;ITKMetaIO;ITKSpatialObjects;ITKPath;ITKImageIntensity;ITKLabelMap;ITKQuadEdgeMesh;ITKFastMarching;ITKIOImageBase;ITKSmoothing;ITKImageFeature;ITKOptimizers;ITKPolynomials;ITKBiasCorrection;ITKColormap;ITKFFT;ITKConvolution;ITKDICOMParser;ITKDeformableMesh;ITKDenoising;ITKDiffusionTensorImage;ITKIOXML;ITKIOSpatialObjects;ITKFEM;ITKPDEDeformableRegistration;ITKFEMRegistration;ITKIOBMP;ITKIOBioRad;ITKIOCSV;ITKIOGDCM;ITKIOIPL;ITKIOGE;ITKIOGIPL;ITKIOHDF5;ITKIOJPEG;ITKIOMeshBase;ITKIOMeshBYU;ITKIOMeshFreeSurfer;ITKIOMeshGifti;ITKIOMeshOBJ;ITKIOMeshOFF;ITKIOMeshVTK;ITKIOMeta;ITKIONIFTI;ITKNrrdIO;ITKIONRRD;ITKIOPNG;ITKIOPhilipsREC;ITKIOSiemens;ITKIOStimulate;ITKIOTIFF;ITKTransformFactory;ITKIOTransformBase;ITKIOTransformHDF5;ITKIOTransformInsightLegacy;ITKIOTransformMatlab;ITKIOVTK;ITKKLMRegionGrowing;ITKMarkovRandomFieldsClassifiers;ITKOptimizersv4;ITKQuadEdgeMeshFiltering;ITKRegionGrowing;ITKRegistrationMethodsv4;ITKVTK;ITKTestKernel;ITKVideoCore;")
+                                  
+                                  include("${_DIR}/ITKModuleAPI.cmake")
+                                  itk_module_config(ITK ${ITK_MODULES_ENABLED})
+                                  """)
         
         save(self, os.path.join(self.package_folder, self._module_variables_file_rel_path), content)
 
@@ -485,14 +491,15 @@ class ITKConan(ConanFile):
 
         rmdir(self, os.path.join(self.package_folder, "lib", "pkgconfig"))
         rmdir(self, os.path.join(self.package_folder, "share"))
-        rmdir(self, os.path.join(self.package_folder, self._cmake_module_dir, "Modules"))
+#        rmdir(self, os.path.join(self.package_folder, self._cmake_module_dir, "Modules"))
 
-        keep_list =["UseITK.cmake", "ITKFactoryRegistration.cmake", "ITKInitializeCXXStandard.cmake"]
+        keep_list =["UseITK.cmake", "ITKFactoryRegistration.cmake", "ITKInitializeCXXStandard.cmake", "ITKModuleAPI.cmake"]
         # Do not remove UseITK.cmake, ITKFactoryRegistration.cmake, ITKInitializeCXXStandard.cmake  and *.h.in files
         for cmake_file in glob.glob(os.path.join(self.package_folder, self._cmake_module_dir, "*.cmake")):
             file_name = os.path.basename(cmake_file)
             if file_name not in keep_list:
                 os.remove(cmake_file)
+                pass
 
         self._create_cmake_module_variables()
         self._create_cmake_module_alias_targets()
@@ -505,6 +512,7 @@ class ITKConan(ConanFile):
         if lib_suffix == "-5.3":
             # Add two additional items to build_modules
             build_modules.extend([
+                os.path.join(self._cmake_module_dir, "ITKModuleAPI.cmake"),
                 os.path.join(self._cmake_module_dir, "ITKFactoryRegistration.cmake"),
                 os.path.join(self._cmake_module_dir, "ITKInitializeCXXStandard.cmake")
             ])
